@@ -8,8 +8,23 @@ BEACON_NODE = 2  # Identificador del beacon dentro de la sala (1..N)
 FW_VERSION = (1, 0)
 BATTERY_MV = 3700  # Valor estimado; actualiza si tienes medicion real
 BEACON_ID = "{}-B{:02d}".format(ROOM_ID, BEACON_NODE)
-ADV_INTERVAL_US = 400_000  # 300-500 ms recomendado
-TX_POWER_DBM = -12  # Valor aproximado; ajusta segun tu hardware
+ADV_INTERVAL_US = 500_000  # 500 ms (recomendado para produccion)
+TX_POWER_DBM = -12  # -4 dBm para distancias largas (4-10 metros); usar -12 dBm para cortas
+# Parametro de propagacion para RSSI: n=2.5 para espacios libres de obstaculos
+
+# Logs: usa LOG_VERBOSE=True solo para depurar
+LOG_INFO = True
+LOG_VERBOSE = False
+LOG_HEARTBEAT_EVERY = 2  # cada 2 ciclos = 10 s
+
+# Estructura del Service Data (UUID 0xA00A):
+# - ROOM_ID (6 bytes): ID de la sala en UTF-8 (ej. "SALA_2")
+# - BEACON_NODE (1 byte): Numero del beacon en la sala (1-255)
+# - FW_VERSION (2 bytes): Major + Minor
+# - TX_POWER_DBM (1 byte signed): Potencia de transmision calibrada (-128 a 127)
+# - BATTERY_MV (2 bytes): Nivel de bateria en mV (0-65535)
+# Total Service Data: 12 bytes
+
 SERVICE_UUID_16 = 0xA00A  # UUID 16-bit reservado para datos del beacon
 CHAR_UUID_ID = 0xA00B
 CHAR_UUID_TX = 0xA00C
@@ -42,6 +57,16 @@ def _advertising_payload(name=None, service_uuid_16=None, service_data=None, tx_
     return payload
 
 
+def _log_info(message):
+    if LOG_INFO:
+        print(message)
+
+
+def _log_verbose(message):
+    if LOG_VERBOSE:
+        print(message)
+
+
 class BLEBeacon:
     def __init__(self, beacon_id):
         self._ble = ubluetooth.BLE()
@@ -68,22 +93,23 @@ class BLEBeacon:
             conn_handle, addr_type, addr = data
             self._connections.add(conn_handle)
             addr_str = ":".join("{:02x}".format(b) for b in bytes(addr))
-            print("Central conectado: {} (type {})".format(addr_str, addr_type))
+            _log_verbose("Central conectado: {} (type {})".format(addr_str, addr_type))
         elif event == _IRQ_CENTRAL_DISCONNECT:
             conn_handle, addr_type, addr = data
             if conn_handle in self._connections:
                 self._connections.remove(conn_handle)
             addr_str = ":".join("{:02x}".format(b) for b in bytes(addr))
-            print("Central desconectado: {} (type {})".format(addr_str, addr_type))
+            _log_verbose("Central desconectado: {} (type {})".format(addr_str, addr_type))
             self._advertise()
         elif event == _IRQ_GATTS_WRITE:
             conn_handle, value_handle = data
-            print("GATTS write: conn={} handle={}".format(conn_handle, value_handle))
+            _log_verbose("GATTS write: conn={} handle={}".format(conn_handle, value_handle))
 
     def _advertise(self):
         room_bytes = ROOM_ID.encode("utf-8")
         fw_major, fw_minor = FW_VERSION
-        extra = struct.pack("<BBBH", BEACON_NODE, fw_major, fw_minor, BATTERY_MV)
+        # Incluir TX_POWER_DBM en el Service Data junto con sala y beacon
+        extra = struct.pack("<BBBbH", BEACON_NODE, fw_major, fw_minor, TX_POWER_DBM, BATTERY_MV)
         service_data = room_bytes + extra
         adv_data = _advertising_payload(
             name=ROOM_ID,
@@ -93,30 +119,44 @@ class BLEBeacon:
         )
 
         try:
-            self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data, connectable=True)
+            self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data, connectable=False)
+            _log_verbose("Advertising en curso (connectable=False)")
         except TypeError:
             # Compatibilidad con firmwares que no soportan connectable
             self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data)
+            _log_verbose("Advertising en curso (modo compatibilidad)")
 
-        print("Advertising en curso")
-        print("Beacon emitiendo: ID = {}".format(self._beacon_id))
+        interval_ms = ADV_INTERVAL_US / 1000
+        _log_verbose("Log TX: potencia={} dBm, intervalo={} ms".format(TX_POWER_DBM, int(interval_ms)))
+        _log_verbose("Beacon emitiendo: ID = {}".format(self._beacon_id))
+        _log_verbose("Service Data: Sala={}, Beacon={}, TxPower={}dBm, Battery={}mV".format(
+            ROOM_ID, BEACON_NODE, TX_POWER_DBM, BATTERY_MV))
 
     def start(self):
+        _log_info("Advertising iniciado")
         self._advertise()
 
     def stop(self):
         self._ble.gap_advertise(None)
-        print("Advertising detenido")
+        _log_info("Advertising detenido")
 
 
 def main():
-    print("Iniciando beacon BLE...")
+    _log_info("Iniciando beacon BLE...")
     beacon = BLEBeacon(BEACON_ID)
     beacon.start()
-
+    
+    counter = 0
     # Mantener el beacon activo
     while True:
         time.sleep(5)
+        counter += 1
+        if counter % LOG_HEARTBEAT_EVERY == 0:
+            _log_info("Heartbeat: {} seg - Beacon activo".format(counter * 5))
+        # Re-anunciar cada 25 segundos para evitar timeouts
+        if counter % 5 == 0:
+            _log_verbose("Re-advertising (keepalive)...")
+            beacon._advertise()
 
 
 if __name__ == "__main__":
