@@ -7,22 +7,23 @@ cd C:\Users\pc\Documents\iot
 ```
 
 **Editar código:**
-- Edita main.py en VSCode
+- Edita museiq.py en VSCode
 
 **Subir y ejecutar:**
 ```powershell
-python -m mpremote connect COM5 fs cp main.py :main.py + reset
+.\.venv\Scripts\python.exe -m mpremote connect COM5 fs cp museiq.py :main.py
+.\.venv\Scripts\python.exe -m mpremote connect COM5 reset
 ```
 
 **Ver salida en tiempo real (REPL):**
 ```powershell
-python -m mpremote connect COM5 repl
+.\.venv\Scripts\python.exe -m mpremote connect COM5 repl
 ```
 _(Salir con `Ctrl+]` o `Ctrl+x`)_
 
 **Ejecutar sin guardar (prueba rápida):**
 ```powershell
-python -m mpremote connect COM5 run main.py
+.\.venv\Scripts\python.exe -m mpremote connect COM5 run museiq.py
 ```
 
 ---

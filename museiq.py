@@ -3,7 +3,7 @@ import time
 import ubluetooth
 
 # Configuracion del beacon
-ROOM_ID = "SALA_2"
+ROOM_ID = "SALA_1"
 BEACON_NODE = 2  # Identificador del beacon dentro de la sala (1..N)
 FW_VERSION = (1, 0)
 BATTERY_MV = 3700  # Valor estimado; actualiza si tienes medicion real
@@ -119,8 +119,8 @@ class BLEBeacon:
         )
 
         try:
-            self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data, connectable=False)
-            _log_verbose("Advertising en curso (connectable=False)")
+            self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data, connectable=True)
+            _log_verbose("Advertising en curso (connectable=True)")
         except TypeError:
             # Compatibilidad con firmwares que no soportan connectable
             self._ble.gap_advertise(ADV_INTERVAL_US, adv_data=adv_data)
