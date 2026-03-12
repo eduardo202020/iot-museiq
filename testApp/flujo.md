@@ -1,23 +1,25 @@
 ### Flujo de trabajo para testApp (BLE bidireccional)
 
+> **Linux** — puerto: `/dev/ttyUSB0` (ajusta si difiere). Ejecuta desde la raíz del proyecto.
+
 **Activar entorno virtual:**
-```powershell
-cd C:\Users\pc\Documents\iot
-.venv\Scripts\Activate.ps1
+```bash
+cd ~/proyectos/iot/iot-museiq
+source .venv/bin/activate
 ```
 
 **Editar código:**
-- Edita testApp\bidir.py en VSCode
+- Edita `testApp/bidir.py` en VSCode
 
 **Subir y ejecutar en ESP32:**
-```powershell
-.\.venv\Scripts\python.exe -m mpremote connect COM5 fs cp testApp\bidir.py :main.py
-.\.venv\Scripts\python.exe -m mpremote connect COM5 reset
+```bash
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 fs cp testApp/bidir.py :main.py
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 reset
 ```
 
 **Ver salida en tiempo real (REPL):**
-```powershell
-.\.venv\Scripts\python.exe -m mpremote connect COM5 repl
+```bash
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 repl
 ```
 _(Salir con `Ctrl+]` o `Ctrl+x`)_
 
@@ -28,8 +30,8 @@ main.send_text('Hola app, desde REPL')
 ```
 
 **Ejecutar sin guardar (prueba rápida):**
-```powershell
-.\.venv\Scripts\python.exe -m mpremote connect COM5 run testApp\bidir.py
+```bash
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 run testApp/bidir.py
 ```
 
 ---
