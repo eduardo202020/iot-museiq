@@ -12,9 +12,13 @@ CHAR_UUID_TX = ubluetooth.UUID(0xA102)  # ESP32 responde aqui
 _IRQ_CENTRAL_CONNECT = 1
 _IRQ_CENTRAL_DISCONNECT = 2
 _IRQ_GATTS_WRITE = 3
-LED1_GPIO = 2
-LED2_GPIO = 15
-BUTTON_GPIO = 0
+
+# Configuracion para ESP32-C3 Super Mini.
+# Ajusta estos pines segun tu cableado real.
+DEVICE_NAME = "ESP32-C3-Bidir"
+LED1_GPIO = 8       # Suele ser el LED integrado en muchas placas C3 Super Mini
+LED2_GPIO = 7       # LED externo recomendado en tu placa
+BUTTON_GPIO = None  # Define un GPIO externo si conectas un boton
 BUTTON_DEBOUNCE_MS = 180
 
 CURRENT_BLE = None
@@ -37,6 +41,21 @@ def _adv_payload(name, service_uuid_16):
     return payload
 
 
+def _setup_output_pin(gpio, label):
+    if gpio is None:
+        print("{} deshabilitado".format(label))
+        return None
+
+    try:
+        pin = Pin(gpio, Pin.OUT)
+        pin.value(0)
+        print("{} configurado en GPIO{}".format(label, gpio))
+        return pin
+    except Exception:
+        print("No se pudo configurar {} en GPIO{}".format(label, gpio))
+        return None
+
+
 class BLEBidirectional:
     def __init__(self):
         self._ble = ubluetooth.BLE()
@@ -50,21 +69,8 @@ class BLEBidirectional:
         self._register_services()
 
     def _setup_led(self):
-        try:
-            self._led1 = Pin(LED1_GPIO, Pin.OUT)
-            self._led1.value(0)
-            print("LED1 configurado en GPIO{}".format(LED1_GPIO))
-        except Exception:
-            self._led1 = None
-            print("No se pudo configurar LED1 en GPIO{}".format(LED1_GPIO))
-
-        try:
-            self._led2 = Pin(LED2_GPIO, Pin.OUT)
-            self._led2.value(0)
-            print("LED2 configurado en GPIO{}".format(LED2_GPIO))
-        except Exception:
-            self._led2 = None
-            print("No se pudo configurar LED2 en GPIO{}".format(LED2_GPIO))
+        self._led1 = _setup_output_pin(LED1_GPIO, "LED1")
+        self._led2 = _setup_output_pin(LED2_GPIO, "LED2")
 
     def _register_services(self):
         service = (
@@ -144,7 +150,7 @@ class BLEBidirectional:
         self.send_text(msg)
 
     def _advertise(self):
-        payload = _adv_payload("ESP32-Bidir", 0xA100)
+        payload = _adv_payload(DEVICE_NAME, 0xA100)
         try:
             self._ble.gap_advertise(500_000, adv_data=payload, connectable=True)
             print("Advertising (bidireccional, connectable=True)")
@@ -185,6 +191,11 @@ def main():
     print("Iniciando BLE bidireccional...")
     CURRENT_BLE = BLEBidirectional()
     CURRENT_BLE.start()
+
+    if BUTTON_GPIO is None:
+        print("Boton deshabilitado; define BUTTON_GPIO si conectas uno externo")
+        while True:
+            time.sleep_ms(200)
 
     # Boton dedicado para enviar evento BLE (activo en LOW con PULL_UP)
     boton = Pin(BUTTON_GPIO, Pin.IN, Pin.PULL_UP)

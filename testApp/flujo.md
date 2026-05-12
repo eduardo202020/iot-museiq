@@ -11,9 +11,20 @@ source .venv/bin/activate
 **Editar código:**
 - Edita `testApp/bidir.py` en VSCode
 
+**Perfiles por mini:**
+- `testApp/mini_1.py` -> BLE name `S1-M1`, identificador TX inicial `S1|M1|TX=-12`
+- `testApp/mini_2.py` -> BLE name `S1-M2`, identificador TX inicial `S1|M2|TX=-12`
+- `testApp/mini_3.py` -> BLE name `S1-M3`, identificador TX inicial `S1|M3|TX=-12`
+
 **Subir y ejecutar en ESP32:**
 ```bash
 .venv/bin/python -m mpremote connect /dev/ttyUSB0 fs cp testApp/bidir.py :main.py
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 reset
+```
+
+**Ejemplo para un mini identificado:**
+```bash
+.venv/bin/python -m mpremote connect /dev/ttyUSB0 fs cp testApp/mini_2.py :main.py
 .venv/bin/python -m mpremote connect /dev/ttyUSB0 reset
 ```
 
@@ -37,25 +48,26 @@ main.send_text('Hola app, desde REPL')
 ---
 
 **Prueba desde la app:**
-- Escanea y conecta al dispositivo `ESP32-Bidir`.
+- Escanea y conecta al dispositivo `ESP32-C3-Bidir` o a `S1-M1` / `S1-M2` / `S1-M3` si cargaste uno de los perfiles dedicados.
 - Característica RX (`0xA101`): escribe un texto o número.
 - Característica TX (`0xA102`): lee la respuesta (eco) o recibe notificación.
 - Verás logs en el REPL cada vez que la app escriba.
 
 **Comandos para controlar LED desde la app (RX 0xA101):**
-- `LED1_ON`  (GPIO2)
-- `LED1_OFF` (GPIO2)
-- `LED2_ON`  (GPIO15)
-- `LED2_OFF` (GPIO15)
+- `LED1_ON`  (GPIO8 por defecto en `ESP32-C3 Super Mini`)
+- `LED1_OFF` (GPIO8 por defecto)
+- `LED2_ON`  (GPIO7 por defecto)
+- `LED2_OFF` (GPIO7 por defecto)
 
 **Respuesta esperada por TX (0xA102):**
-- `LED1_GPIO2_ON/OFF`
-- `LED2_GPIO15_ON/OFF`
+- `LED1_GPIO8_ON/OFF` si mantienes la configuracion por defecto
+- `LED2_GPIO7_ON/OFF` si mantienes la configuracion por defecto
 
 **Envio de señal por boton fisico:**
-- Conecta un boton a `GPIO0` (a GND, usando `PULL_UP` interno).
-- Al presionar, el ESP32 envia por TX: `BTN_GPIO0_PRESS`.
-- Al soltar, el ESP32 envia por TX: `BTN_GPIO0_RELEASE`.
+- Por defecto el boton esta deshabilitado (`BUTTON_GPIO = None`).
+- Si conectas uno externo, asigna `BUTTON_GPIO` a un pin seguro y conectalo a GND usando `PULL_UP` interno.
+- Al presionar, el ESP32 envia por TX: `BOTON_GPIOx_PRESS`.
+- Al soltar, el ESP32 envia por TX: `BOTON_GPIOx_RELEASE`.
 - En la app debes habilitar notificaciones/monitor en TX (`0xA102`) para recibir estos eventos en tiempo real.
 
 **Diagnóstico rápido si no conecta:**
