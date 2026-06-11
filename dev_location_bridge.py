@@ -58,6 +58,17 @@ SALA_1_ZONES = [
     },
 ]
 
+VR_COMMANDS = {
+    "s4",
+    "sala vr",
+    "sala_vr",
+    "salavr",
+    "vr",
+    "vr | s4",
+    "vr/s4",
+    "vr|s4",
+}
+
 
 class LocationState:
     def __init__(self) -> None:
@@ -198,7 +209,7 @@ def make_handler(location_state: LocationState) -> type[BaseHTTPRequestHandler]:
                 room = (params.get("room") or params.get("sala") or [""])[0].strip().lower()
                 zone = (params.get("zone") or params.get("zona") or [""])[0].strip().lower()
 
-                if room in {"vr", "sala_vr", "salavr"} or zone in {"vr", "s4"}:
+                if room in VR_COMMANDS or zone in VR_COMMANDS:
                     self._send_json(location_state.set_sala_vr())
                     return
 
@@ -258,7 +269,7 @@ def run_terminal(location_state: LocationState, server: ThreadingHTTPServer, hos
             print(state["message"])
             continue
 
-        if command in {"vr", "s4", "sala_vr", "salavr"}:
+        if command in VR_COMMANDS:
             state = location_state.set_sala_vr()
             print(state["message"])
             continue
