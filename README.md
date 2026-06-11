@@ -5,8 +5,15 @@ Proyecto de pruebas BLE con ESP32/ESP32-C3 (MicroPython), dividido en dos aplica
 - **`museiq.py`**: beacon BLE para identificación/zonas (solo advertising, opcional connectable).
 - **`testApp/bidir.py`**: servicio BLE bidireccional con RX/TX para interacción con app (control de LEDs, botones, comandos).
 - **`testApp/mini_1.py`, `mini_2.py`, `mini_3.py`**: versiones preconfigradas para salas/dispositivos específicos.
+- **`dev_location_bridge.py`**: simulador HTTP interactivo para probar `museiqApp` como si recibiera beacons BLE.
 
 ## Características
+
+### Simulador de ubicación (`dev_location_bridge.py`)
+- Levanta un endpoint HTTP local en `:8787` para que `museiqApp` lo consulte desde el celular.
+- Permite ingresar por terminal el avance del usuario: zonas `1..6` para `SALA_1` o `vr`/`s4` para `SALA_VR`.
+- Cada zona de `SALA_1` apunta a una obra exacta y expone dos QR de prueba (`SALA_1-01-A`, `SALA_1-01-B`, etc.).
+- `SALA_VR` simula el beacon `S4` y habilita el modo inmersivo en la app.
 
 ### Beacon BLE (`museiq.py`)
 - **Advertising beacon conectable** con datos de sala y dispositivo
@@ -48,6 +55,7 @@ Cada una incluye códigos de sala/dispositivo en el device name y puede customiz
 ```
 .
 ├── museiq.py                 # Beacon BLE conectable
+├── dev_location_bridge.py    # Simulador HTTP de ubicacion para museiqApp
 ├── testApp/
 │   ├── bidir.py              # Servicio bidireccional genérico
 │   ├── mini_1.py             # Preconfigrado S1-M1
@@ -93,6 +101,46 @@ Típicamente: `/dev/ttyACM0` (puede variar si hay múltiples puertos)
 .venv/bin/python -m mpremote connect /dev/ttyACM0 repl
 ```
 Presiona `Ctrl+]` o `Ctrl+x` para salir del REPL.
+
+## Simular ubicación para museiqApp
+
+Este flujo permite probar el recorrido sin ESP32 físicos:
+
+```bash
+cd /home/eduardo/proyectos/iot/museiq/iot-museiq
+python dev_location_bridge.py --host 0.0.0.0 --port 8787
+```
+
+En la terminal interactiva:
+
+```text
+1      -> SALA_1, zona/obra 1
+2      -> SALA_1, zona/obra 2
+3      -> SALA_1, zona/obra 3
+4      -> SALA_1, zona/obra 4
+5      -> SALA_1, zona/obra 5
+6      -> SALA_1, zona/obra 6
+vr     -> SALA_VR, modo inmersivo
+clear  -> pausar ubicación simulada
+status -> ver estado actual
+q      -> salir
+```
+
+`museiqApp` intenta descubrir automáticamente el bridge en la misma IP de Metro usando `http://<IP_PC>:8787`. Si necesitas fijarlo manualmente, inicia Expo con:
+
+```bash
+EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 npx expo start --dev-client --host lan -c
+```
+
+Contrato disponible:
+
+```text
+GET  /health
+GET  /state
+GET  /set?zone=1
+GET  /set?zone=vr
+POST /set {"zone": 1}
+```
 
 ## Cargar Firmware
 
