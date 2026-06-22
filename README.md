@@ -86,9 +86,14 @@ Cada una incluye códigos de sala/dispositivo en el device name y puede customiz
 
 ### 1. Preparar entorno
 ```bash
-cd ~/proyectos/iot/museiq/iot-museiq
+cd ~/proyectos/MuseIQ/iot-museiq
+python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
+
+La creacion del entorno y la instalacion solo son necesarias la primera vez.
+En los siguientes arranques basta con ejecutar `source .venv/bin/activate`.
 
 ### 2. Ubicar puerto serial
 ```bash
@@ -107,7 +112,8 @@ Presiona `Ctrl+]` o `Ctrl+x` para salir del REPL.
 Este flujo permite probar el recorrido sin ESP32 físicos:
 
 ```bash
-cd /home/eduardo/proyectos/iot/museiq/iot-museiq
+cd /home/eduardo/proyectos/MuseIQ/iot-museiq
+source .venv/bin/activate
 python dev_location_bridge.py --host 0.0.0.0 --port 8787
 ```
 
@@ -124,6 +130,21 @@ vr     -> SALA_VR, modo inmersivo
 clear  -> pausar ubicación simulada
 status -> ver estado actual
 q      -> salir
+```
+
+### Acceso desde un celular cuando WSL usa red mirrored
+
+Ejecuta una vez desde PowerShell como Administrador:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File `
+  "\\wsl.localhost\Ubuntu\home\eduardo\proyectos\MuseIQ\iot-museiq\scripts\allow-wsl-bridge.ps1"
+```
+
+Luego inicia Expo configurando la URL LAN del bridge:
+
+```bash
+EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 npx expo start --dev-client --tunnel -c
 ```
 
 `museiqApp` intenta descubrir automáticamente el bridge en la misma IP de Metro usando `http://<IP_PC>:8787`. Si necesitas fijarlo manualmente, inicia Expo con:
