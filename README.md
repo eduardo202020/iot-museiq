@@ -444,3 +444,39 @@ Importante: en `ESP32-C3` los pines de strapping pueden variar segun la placa. E
 ```bash
 .venv/bin/python -m mpremote connect /dev/ttyACM0 exec "import main; main.send_text('Hola desde teclado')"
 ```
+
+## Pruebas en Windows (PowerShell)
+
+Preparacion inicial:
+
+```powershell
+cd C:\Users\pc\Documents\proyectos\Museiq\iot-museiq
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Simulador de proximidad para `museApp` y `Tesis/tesis/simulacion`:
+
+```powershell
+.\.venv\Scripts\python.exe dev_location_bridge.py --host 0.0.0.0 --port 8787
+```
+
+Verificacion desde otra terminal:
+
+```powershell
+irm http://127.0.0.1:8787/health
+irm http://127.0.0.1:8787/state
+irm "http://127.0.0.1:8787/set?zone=1"
+irm "http://127.0.0.1:8787/set?zone=vr"
+irm "http://127.0.0.1:8787/set?zone=clear"
+```
+
+Para hardware real, identifica el puerto y reemplaza `COM5` por el detectado:
+
+```powershell
+.\.venv\Scripts\python.exe -m mpremote connect list
+.\.venv\Scripts\python.exe -m mpremote connect COM5 repl
+```
+
+Usa `Ctrl+]` para salir del REPL y `Ctrl+C` para cerrar el bridge.
