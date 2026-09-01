@@ -28,6 +28,8 @@ una migracion coordinada con la app.
 - `testApp/bidir.py`: servicio BLE bidireccional generico.
 - `testApp/mini_*.py`: perfiles de hardware preconfigurados.
 - `dev_location_bridge.py`: simulador que consume la app movil.
+- `harness/manifest.json`: identidad, capacidades y pares del nodo IoT.
+- `harness/doctor.py`: diagnostico local y conectividad entre nodos.
 - `README.md`: protocolo, cableado y operacion.
 - `flujo.md` y `testApp/flujo.md`: comandos rapidos de laboratorio.
 
@@ -48,6 +50,21 @@ Si cambias cualquiera de estos contratos, actualiza en el mismo trabajo
 `museiqApp/hooks/use-ble-scanner.ts`,
 `museiqApp/hooks/use-simulated-ble-location.ts`, tipos relacionados y
 documentacion.
+
+## Harness distribuido
+
+Este repositorio es el nodo `iot-museiq` de una topologia de tres proyectos.
+Conoce explicitamente a `museiqApp` y `museRAG` mediante
+`harness/manifest.json`. Antes de cambiar una frontera entre repositorios:
+
+```bash
+python3 harness/doctor.py --offline
+cd ../museiq-harness && python3 -m museiq_harness topology
+```
+
+No agregues una llamada directa de firmware o bridge hacia MuseRAG: la ruta
+normal es `iot-museiq -> museiqApp -> museRAG`. El conocimiento del tercer nodo
+sirve para validar topologia, contratos y diagnostico del sistema completo.
 
 ## Estilo de implementacion
 

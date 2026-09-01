@@ -1,0 +1,53 @@
+{
+  "$schema": "../../museiq-harness/contracts/harness-node.schema.json",
+  "schemaVersion": 1,
+  "id": "iot-museiq",
+  "displayName": "MuseIQ IoT",
+  "role": "Proveedor de contexto fisico y ubicacion",
+  "runtime": "MicroPython firmware + Python 3.11 bridge",
+  "implementation": [
+    "../museiq.py",
+    "../dev_location_bridge.py"
+  ],
+  "harness": {
+    "entrypoint": "doctor.py",
+    "doctor": "python3 harness/doctor.py",
+    "offline": "python3 harness/doctor.py --offline"
+  },
+  "capabilities": {
+    "provides": [
+      {
+        "id": "museiq.location.v1",
+        "transport": "http-json",
+        "baseUrlEnv": "MUSEIQ_IOT_URL",
+        "defaultBaseUrl": "http://127.0.0.1:8787",
+        "healthPath": "/health",
+        "endpoints": [
+          "GET /health",
+          "GET /state",
+          "GET /set",
+          "POST /set"
+        ],
+        "contracts": [
+          {
+            "id": "location-state",
+            "schema": "../../museiq-harness/contracts/location-state.schema.json"
+          }
+        ]
+      }
+    ],
+    "consumes": []
+  },
+  "peers": [
+    {
+      "id": "museiqApp",
+      "manifest": "../../museiqApp/harness/manifest.json",
+      "relationship": "Consumidor movil de ubicacion y mediador hacia MuseRAG"
+    },
+    {
+      "id": "museRAG",
+      "manifest": "../../museRAG/harness/manifest.json",
+      "relationship": "Proveedor de conocimiento alcanzado a traves de museiqApp"
+    }
+  ]
+}

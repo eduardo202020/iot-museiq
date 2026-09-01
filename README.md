@@ -144,13 +144,20 @@ powershell.exe -ExecutionPolicy Bypass -File `
 Luego inicia Expo configurando la URL LAN del bridge:
 
 ```bash
-EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 npx expo start --dev-client --tunnel -c
+EXPO_PUBLIC_MUSEIQ_HARNESS_MODE=1 \
+EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 \
+npx expo start --dev-client --tunnel -c
 ```
 
-`museiqApp` intenta descubrir automáticamente el bridge en la misma IP de Metro usando `http://<IP_PC>:8787`. Si necesitas fijarlo manualmente, inicia Expo con:
+El bridge solo puede dominar la ubicacion cuando
+`EXPO_PUBLIC_MUSEIQ_HARNESS_MODE=1`. Sin ese opt-in, la app usa BLE fisico. Si
+no defines la URL, el modo harness intenta descubrir el bridge en la misma IP
+de Metro usando `http://<IP_PC>:8787`. Para fijarla manualmente:
 
 ```bash
-EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 npx expo start --dev-client --host lan -c
+EXPO_PUBLIC_MUSEIQ_HARNESS_MODE=1 \
+EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:8787 \
+npx expo start --dev-client --host lan -c
 ```
 
 Contrato disponible:
@@ -162,6 +169,35 @@ GET  /set?zone=1
 GET  /set?zone=vr
 POST /set {"zone": 1}
 ```
+
+### Validar el contrato con `museiq-harness`
+
+Este repositorio incluye su propio nodo en `harness/`. Primero comprueba que
+conoce los manifiestos de `museiqApp` y `museRAG`:
+
+```bash
+python3 harness/doctor.py --offline
+```
+
+El orquestador compartido comprueba las seis zonas, `SALA_VR`, `clear`, la
+topologia de tres nodos y la forma JSON real de este bridge:
+
+```bash
+cd ../museiq-harness
+MUSEIQ_IOT_REPO=../iot-museiq python3 -m unittest discover -s tests -v
+python3 -m museiq_harness topology
+python3 -m museiq_harness validate scenarios/location-mvp.json
+```
+
+Con el bridge en ejecucion tambien se puede correr el escenario HTTP:
+
+```bash
+python3 -m museiq_harness run scenarios/location-mvp.json --skip-rag
+```
+
+Consulta [harness/README.md](harness/README.md) para este nodo y
+[museiq-harness/README.md](../museiq-harness/README.md) para validar la
+integracion completa.
 
 ## Cargar Firmware
 
