@@ -5,7 +5,7 @@ Uso:
   python dev_location_bridge.py --host 0.0.0.0 --port 8787
 
 La app museiqApp consulta GET /state y recibe un beacon dominante simulado.
-Esto permite validar el flujo Sala 1 -> Sala VR sin ESP32 fisicos.
+Esto permite validar las tres salas tematicas y Sala VR sin ESP32 fisicos.
 """
 
 from __future__ import annotations
@@ -19,44 +19,53 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 
-SALA_1_ZONES = [
-    {
-        "artworkId": "obra-1-1-L",
+ROOM_CATALOG = {
+    "SALA_1": {
         "beaconNode": 1,
-        "label": "Zona 1 - Obra 1",
-        "qrCodes": ["SALA_1-01-A", "SALA_1-01-B"],
+        "label": "Conocimiento de la UNI",
+        "artworks": [
+            ("obra-1-1-L", "Escritorio historico y legado de Habich"),
+            ("obra-1-1-C", "Maquina de escribir"),
+            ("obra-1-1-R", "Busto de Miguel Grau"),
+            ("obra-1-2-L", "Busto de Jose de San Martin"),
+        ],
     },
-    {
-        "artworkId": "obra-1-1-C",
+    "SALA_2": {
         "beaconNode": 2,
-        "label": "Zona 2 - Obra 2",
-        "qrCodes": ["SALA_1-02-A", "SALA_1-02-B"],
+        "label": "Minerales del Peru",
+        "artworks": [
+            ("mineral-bornita", "Bornita"),
+            ("mineral-esfalerita", "Esfalerita"),
+            ("mineral-magnetita", "Magnetita"),
+            ("mineral-wolframita", "Wolframita"),
+            ("mineral-azurita", "Azurita"),
+            ("obra-1-2-C", "Malaquita y cobre"),
+            ("mineral-galena", "Galena"),
+            ("mineral-oro", "Muestra rotulada como oro"),
+            ("mineral-pirita", "Pirita"),
+            ("mineral-plata", "Muestra rotulada como plata"),
+        ],
     },
-    {
-        "artworkId": "obra-1-1-R",
+    "SALA_3": {
         "beaconNode": 3,
-        "label": "Zona 3 - Obra 3",
-        "qrCodes": ["SALA_1-03-A", "SALA_1-03-B"],
+        "label": "Culturas antiguas del Peru",
+        "artworks": [
+            ("cultura-musico-moche", "Musico moche"),
+            ("cultura-botella-chimu", "Botella Chimu-Lambayeque"),
+            ("obra-1-2-R", "Aribalo inca de referencia"),
+            ("cultura-asiento-inca", "Asiento del Inca de referencia"),
+            ("cultura-botella-chavin", "Botella Chavin 204002"),
+            ("cultura-obelisco-tello", "Obelisco Tello de referencia"),
+        ],
     },
-    {
-        "artworkId": "obra-1-2-L",
-        "beaconNode": 4,
-        "label": "Zona 4 - Obra 4",
-        "qrCodes": ["SALA_1-04-A", "SALA_1-04-B"],
-    },
-    {
-        "artworkId": "obra-1-2-C",
-        "beaconNode": 5,
-        "label": "Zona 5 - Obra 5",
-        "qrCodes": ["SALA_1-05-A", "SALA_1-05-B"],
-    },
-    {
-        "artworkId": "obra-1-2-R",
-        "beaconNode": 6,
-        "label": "Zona 6 - Obra 6",
-        "qrCodes": ["SALA_1-06-A", "SALA_1-06-B"],
-    },
-]
+}
+
+ROOM_PREFIXES = {"u": "SALA_1", "m": "SALA_2", "c": "SALA_3"}
+ROOM_ALIASES = {
+    "1": "SALA_1", "s1": "SALA_1", "sala1": "SALA_1", "sala_1": "SALA_1", "uni": "SALA_1",
+    "2": "SALA_2", "s2": "SALA_2", "sala2": "SALA_2", "sala_2": "SALA_2", "minerales": "SALA_2",
+    "3": "SALA_3", "s3": "SALA_3", "sala3": "SALA_3", "sala_3": "SALA_3", "culturas": "SALA_3",
+}
 
 VR_COMMANDS = {
     "s4",
@@ -68,6 +77,21 @@ VR_COMMANDS = {
     "vr/s4",
     "vr|s4",
 }
+
+
+def resolve_room_artwork(room: str, zone: str) -> tuple[str, int]:
+    """Resolve room/order while preserving plain 1..4 as legacy SALA_1 zones."""
+    normalized_room = ROOM_ALIASES.get(room, room.upper()) if room else ""
+    if normalized_room in ROOM_CATALOG:
+        return normalized_room, int(zone or "1")
+
+    if len(zone) >= 2 and zone[0] in ROOM_PREFIXES and zone[1:].isdigit():
+        return ROOM_PREFIXES[zone[0]], int(zone[1:])
+
+    if zone in {"s1", "s2", "s3"}:
+        return ROOM_ALIASES[zone], 1
+
+    return "SALA_1", int(zone)
 
 
 class LocationState:
@@ -94,38 +118,55 @@ class LocationState:
             }
             return dict(self._state)
 
-    def set_sala_1_zone(self, zone_number: int, rssi: int = -42) -> dict[str, Any]:
-        if zone_number < 1 or zone_number > len(SALA_1_ZONES):
-            raise ValueError("La zona de SALA_1 debe estar entre 1 y 6.")
+    def set_room_artwork(
+        self,
+        room_id: str,
+        artwork_order: int,
+        rssi: int = -42,
+    ) -> dict[str, Any]:
+        room = ROOM_CATALOG.get(room_id)
+        if room is None:
+            raise ValueError("La sala debe ser SALA_1, SALA_2 o SALA_3.")
 
-        zone = SALA_1_ZONES[zone_number - 1]
+        artworks = room["artworks"]
+        if artwork_order < 1 or artwork_order > len(artworks):
+            raise ValueError(
+                f"La obra de {room_id} debe estar entre 1 y {len(artworks)}."
+            )
+
+        artwork_id, artwork_label = artworks[artwork_order - 1]
         now = int(time.time() * 1000)
+        qr_base = f"{room_id}-{artwork_order:02d}"
         beacon = {
-            "artworkId": zone["artworkId"],
+            "artworkId": artwork_id,
             "battery": 3700,
-            "beaconNode": zone["beaconNode"],
-            "deviceAddress": f"SIM:SALA_1:{zone_number}",
+            "beaconNode": room["beaconNode"],
+            "deviceAddress": f"SIM:{room_id}:{artwork_order}",
             "firmwareMajor": 1,
             "firmwareMinor": 0,
             "firmwareVersion": "sim",
-            "id": f"SALA_1-SIM-Z{zone_number:02d}",
-            "qrCodes": zone["qrCodes"],
-            "roomId": "SALA_1",
+            "id": f"{room_id}-SIM-Z{artwork_order:02d}",
+            "qrCodes": [f"{qr_base}-A", f"{qr_base}-B"],
+            "roomId": room_id,
             "rssi": rssi,
             "txPower": -8,
             "txPowerPayload": -8,
-            "zoneId": f"Z{zone_number}",
-            "zoneLabel": zone["label"],
+            "zoneId": f"{room_id}-Z{artwork_order}",
+            "zoneLabel": f"{room['label']} - {artwork_label}",
         }
 
         with self._lock:
             self._state = {
                 "beacon": beacon,
                 "enabled": True,
-                "message": f"SALA_1 -> {zone['label']} ({zone['artworkId']})",
+                "message": f"{room_id} -> {artwork_label} ({artwork_id})",
                 "updatedAt": now,
             }
             return dict(self._state)
+
+    def set_sala_1_zone(self, zone_number: int, rssi: int = -42) -> dict[str, Any]:
+        """Compatibilidad con clientes anteriores que simulaban solo SALA_1."""
+        return self.set_room_artwork("SALA_1", zone_number, rssi)
 
     def set_sala_vr(self, rssi: int = -40) -> dict[str, Any]:
         now = int(time.time() * 1000)
@@ -217,8 +258,9 @@ def make_handler(location_state: LocationState) -> type[BaseHTTPRequestHandler]:
                     self._send_json(location_state.clear())
                     return
 
-                zone_number = int(zone or (params.get("beaconNode") or [""])[0])
-                self._send_json(location_state.set_sala_1_zone(zone_number))
+                zone = zone or (params.get("beaconNode") or [""])[0].strip().lower()
+                room_id, artwork_order = resolve_room_artwork(room, zone)
+                self._send_json(location_state.set_room_artwork(room_id, artwork_order))
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc), "state": location_state.snapshot()}, status=400)
 
@@ -234,7 +276,11 @@ def print_menu(host: str, port: int) -> None:
     print(f"HTTP: http://{host}:{port}")
     print("Config app: EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL=http://<IP_PC>:%s" % port)
     print("\nComandos:")
-    print("  1..6      -> SALA_1, zona/obra exacta")
+    print("  u1..u4    -> Conocimiento de la UNI")
+    print("  m1..m10   -> Minerales del Peru")
+    print("  c1..c6    -> Culturas antiguas del Peru")
+    print("  s1|s2|s3 -> primera pieza de cada sala")
+    print("  1..4      -> alias compatible de u1..u4")
     print("  vr | s4   -> SALA_VR, modo inmersivo")
     print("  clear     -> pausar ubicacion simulada")
     print("  status    -> ver estado actual")
@@ -275,8 +321,8 @@ def run_terminal(location_state: LocationState, server: ThreadingHTTPServer, hos
             continue
 
         try:
-            zone_number = int(command)
-            state = location_state.set_sala_1_zone(zone_number)
+            room_id, artwork_order = resolve_room_artwork("", command)
+            state = location_state.set_room_artwork(room_id, artwork_order)
             print(state["message"])
         except Exception as exc:  # noqa: BLE001
             print(f"Comando no reconocido: {command!r}. Error: {exc}")

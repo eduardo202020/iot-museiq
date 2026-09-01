@@ -38,12 +38,13 @@ una migracion coordinada con la app.
 - Service Data UUID: `0xA00A`.
 - Caracteristicas de lectura: `0xA00B` y `0xA00C`.
 - Payload de advertising: `struct "6sBBBbH"`, 12 bytes y little-endian.
-- `ROOM_ID` ocupa 6 bytes; los valores activos son `SALA_1` y `SALA_VR`.
+- `ROOM_ID` ocupa 6 bytes; los valores activos son `SALA_1`, `SALA_2`,
+  `SALA_3` y `SALA_VR`.
 - El bridge escucha por defecto en `0.0.0.0:8787`.
 - `GET /health`, `GET /state` y `GET|POST /set` son consumidos por
   `museiqApp`.
-- Las zonas `1..6` deben conservar `artworkId`, `beaconNode` y dos QR
-  consistentes con el catalogo de la app.
+- Los comandos `u1..u4`, `m1..m10` y `c1..c6` deben conservar `artworkId`,
+  `beaconNode` y dos QR consistentes con las tres salas de la app.
 - `vr`/`s4` debe emitir `roomId: "SALA_VR"` y no sugerir una obra normal.
 
 Si cambias cualquiera de estos contratos, actualiza en el mismo trabajo
@@ -125,10 +126,11 @@ python -m py_compile dev_location_bridge.py
 
 Para cambios del contrato simulado, valida al menos:
 
-1. zona `1`;
-2. zona `6`;
-3. `vr`;
-4. `clear`;
+1. zona `u1`;
+2. zona `m10`;
+3. zona `c6`;
+4. `vr`;
+5. `clear`;
 5. consumo desde un celular con `EXPO_PUBLIC_MUSEIQ_BLE_SIM_URL`.
 
 Para firmware, la validacion real requiere ESP32: copiar como `main.py`,

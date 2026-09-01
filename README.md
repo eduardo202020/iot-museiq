@@ -11,8 +11,8 @@ Proyecto de pruebas BLE con ESP32/ESP32-C3 (MicroPython), dividido en dos aplica
 
 ### Simulador de ubicación (`dev_location_bridge.py`)
 - Levanta un endpoint HTTP local en `:8787` para que `museiqApp` lo consulte desde el celular.
-- Permite ingresar por terminal el avance del usuario: zonas `1..6` para `SALA_1` o `vr`/`s4` para `SALA_VR`.
-- Cada zona de `SALA_1` apunta a una obra exacta y expone dos QR de prueba (`SALA_1-01-A`, `SALA_1-01-B`, etc.).
+- Permite ingresar por terminal `u1..u4` para UNI, `m1..m10` para minerales, `c1..c6` para culturas o `vr`/`s4` para `SALA_VR`.
+- Cada comando apunta a una pieza exacta y expone dos QR de prueba coordinados con `SALA_1`, `SALA_2` o `SALA_3`.
 - `SALA_VR` simula el beacon `S4` y habilita el modo inmersivo en la app.
 
 ### Beacon BLE (`museiq.py`)
@@ -165,9 +165,9 @@ Contrato disponible:
 ```text
 GET  /health
 GET  /state
-GET  /set?zone=1
+GET  /set?zone=m6
 GET  /set?zone=vr
-POST /set {"zone": 1}
+POST /set {"zone": "c3"}
 ```
 
 ### Validar el contrato con `museiq-harness`
@@ -179,7 +179,8 @@ conoce los manifiestos de `museiqApp` y `museRAG`:
 python3 harness/doctor.py --offline
 ```
 
-El orquestador compartido comprueba las seis zonas, `SALA_VR`, `clear`, la
+El orquestador compartido comprueba piezas representativas de las tres salas,
+`SALA_VR`, `clear`, la
 topologia de tres nodos y la forma JSON real de este bridge:
 
 ```bash
